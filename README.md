@@ -12,7 +12,6 @@ This was taken from an example which only wrote to one address. I've added more 
 | #CS                   |       GND.                    |
 | Vss                   |       GND.                    |
 | Vdd                   |       +5v.                    |
-|-----------------------|-------------------------------|
 
 The commands are formatted as follows:
 
@@ -25,7 +24,7 @@ Set addr to the first 256 byte boundary that you want to read 256 bytes from. Th
 Erase entire chip: <E,0,0>
 Both parameters are ignored and the whole chip is erased. There is no function to erase a sector which is the minimum you can erase in one go, plus I don't need to erase anything but the whole chip.
 
-At some point I'll write a C# application to flash a whole chip, or you can have a go yourself and let me know and I'll add it to this repo.
+This is a current work in progress and will change a fair bit over the next few weeks. At some point I'll write a C# application to flash a whole chip, or you can have a go yourself and let me know and I'll add it to this repo.
 
 Enjoy!
 Dan R
