@@ -3,14 +3,16 @@ Arduino Mega 2560 SST39SF040 Flash Chip programmer
 
 This was taken from an example which only wrote to one address. I've added more code to process commands and also allow writing manually in a terminal window.
 
-SST39SF040 Pins               Arduino Mega 2560 Pins
-A0 to A18                     22 to 40
-D0 to D7                      44 to 51
-#WE                           2
-#OE                           3
-#CS                           GND
-Vss                           GND
-Vdd                           +5v
+| SST39SF040 Pins       |        Arduino Mega 2560 Pins |
+|-----------------------|-------------------------------|
+| A0 to A18             |       22 to 40.               |
+| D0 to D7              |       44 to 51.               |
+| #WE                   |       2.                      |
+| #OE                   |       3.                      |
+| #CS                   |       GND.                    |
+| Vss                   |       GND.                    |
+| Vdd                   |       +5v.                    |
+|-----------------------|-------------------------------|
 
 The commands are formatted as follows:
 
