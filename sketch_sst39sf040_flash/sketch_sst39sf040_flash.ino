@@ -1,4 +1,4 @@
-//Written poorly by mikemint64
+//Written poorly by mikemint64 - Then modified heavily by Dan Riches
 //visit at mint64.home.blog
 
 #define WE 2
@@ -24,15 +24,22 @@ void programData(byte data, unsigned long address);   //Executes the program com
 byte readData(unsigned long address);                 //Read data as specific address
 void eraseChip();                                     //Executes the erase chip command sequece
 void readSerialCommand(byte in);                      //Decodes incomming serial commands 
+byte ReadID();                                        //Returns 0xB5=SST39SF010A, 0xB6 = SST39SF020A, 0xB7 = SST39SF040A
+void EnterIDMode();                                   //Enter ID Mode, must be called before trying to read the ID of the device
+void ExitIDMode();                                    //Exit ID Mode, must be called before any other operation
+void ListCommands();                                  //Lists commands that are available
 
 const byte numChars = 32;
 char receivedChars[numChars];
 boolean newData = false;
 char messageFromPC[32] = {0};
-unsigned int addressFromPC = 0;
+long addressFromPC = 0;
+long endAddressFromPC = 0;
 int byteFromPC = 0;
+boolean commandValid = 0;
 
-void recvWithStartEndMarkers() {
+void recvWithStartEndMarkers() 
+{
     static boolean recvInProgress = false;
     static byte ndx = 0;
     char startMarker = '<';
@@ -65,11 +72,46 @@ void recvWithStartEndMarkers() {
     }
 }
 
-void showNewData() {
+void printdump(long address, byte value)
+{
+  //Print address at start of each line of 16 values
+  boolean startLine = false;
+  if((address % 16) == 0)
+  {
+    startLine = true;
+    Serial.println("");
+    if(address < 16)
+      Serial.print("0x000");
+  
+    if(address > 15 && address < 256)
+      Serial.print("0x00");
+  
+    if(address > 255 && address < 4096)
+      Serial.print("0x0");
+  
+    if(address > 4095)
+      Serial.print("0x");
+  
+    Serial.print(address, HEX);
+  }
+
+  Serial.print("  ");
+  if(value < 16)
+    Serial.print("0x0");
+  else
+    Serial.print("0x");
+
+  Serial.print(value, HEX);
+}
+
+void showNewData() 
+{
     if (newData == true) 
     {
+      commandValid = 0;       //Set to 1 if command is valid so the drop out catches invalid commands
       char * strtokIndx;
 
+      //Obtain the command character (W R E D I)
       strtokIndx = strtok(receivedChars,",");
       strcpy(messageFromPC, strtokIndx);
       if(debugOutput != 0)
@@ -77,17 +119,22 @@ void showNewData() {
         Serial.print("Message is: ");
         Serial.println(messageFromPC);
       }
-      
+
+      //Parse the first parameter which is the address
       strtokIndx = strtok(NULL, ",");
-      addressFromPC = atoi(strtokIndx);
+      addressFromPC = atol(strtokIndx);
       if(debugOutput != 0)
       {
         Serial.print("Address is: ");
         Serial.println(addressFromPC);
       }
-      
+
+      //parse the second paramter which is the byte value, or the end address in the case of a read (R) or dump (D)
       strtokIndx = strtok(NULL, ",");
-      byteFromPC = atoi(strtokIndx);
+      if(messageFromPC[0] == 'R' || messageFromPC[0] == 'D')
+        endAddressFromPC = atol(strtokIndx);
+      else
+        byteFromPC = atoi(strtokIndx);
       if(debugOutput != 0)
       {
         Serial.print("Byte is: ");
@@ -130,13 +177,45 @@ void showNewData() {
             Serial.println(k, HEX);
           }
         }
+        commandValid = 1;
       }
 
+      //Erase entire chip
       if(messageFromPC[0] == 'E')
       {
         eraseChip();
+        commandValid = 1;
       }
 
+      //Read Chip ID
+      if(messageFromPC[0] == 'I')
+      {
+        Serial.println("Reading Chip ID...");
+        EnterIDMode();
+        byte id = ReadID();
+        ExitIDMode();
+
+        if(id == 0xB5)
+        {
+          Serial.println("Device ID: SST39SF010A");
+          Serial.println("End Address in decimal is: 131071 out of total 131072 bytes");
+        }
+          
+        if(id == 0xB6)
+        {
+          Serial.println("Device ID: SST39SF020A");
+          Serial.println("End Address in decimal is: 262143 out of total 262144 bytes");
+        }
+
+        if(id == 0xB7)
+        {
+          Serial.println("Device ID: SST39SF040A");
+          Serial.println("End Address in decimal is: 524287 out of total 524288 bytes");
+        }
+        commandValid = 1;
+      }
+
+      //Read data from chip
       if(messageFromPC[0] == 'R')
       {
         Serial.println("Reading Chip");
@@ -155,6 +234,33 @@ void showNewData() {
             Serial.print("0x");
           Serial.println(j,HEX);    //reads byteFromPC amount of bytes from addressFromPC as the address, max 255 bytes at a time
         }
+        commandValid = 1;
+      }
+
+      //Dumps a block exactly specified in the command <D,from,to> in a format resembling a hex editor
+      if(messageFromPC[0] == 'D')
+      {
+        Serial.println("Dumping Chip Contents");
+        Serial.print("Start Address: ");
+        Serial.print(addressFromPC, HEX);
+        Serial.print(" to End Address: ");
+        Serial.println(endAddressFromPC, HEX);
+        int j = 0;
+        //Read blocks of 16 bytes
+        for(long i = addressFromPC; i < endAddressFromPC + 1; i++)
+        {
+          j = readData(i);
+          printdump(i, j);
+        }
+        commandValid = 1;
+      }
+
+      //Leave this part at the end, ie add new commands above this line
+      if(commandValid == 0)
+      {
+        Serial.println("Invalid Command Received!");
+        Serial.println("Valid commands are as follows:");
+        ListCommands();
       }
     }
 }
@@ -165,9 +271,24 @@ void setup()
   setCtrlPins();
   setAddrPinsOut();
 
-  Serial.begin(115200);
+  Serial.begin(2000000);
   delay(2);
   Serial.println("Arduino Flash Programmer Started");
+  Serial.println("Commands available are as follows:");
+  Serial.println("<W,a,b>   Write to address a with byte value b.");
+  Serial.println("<R,a,0>   Read a 256 byte block from chip starting at address a. Dump maybe more useful");
+  Serial.println("<E,0,0>   Erase entire chip, both parameters are ignored but must be supplied.");
+  Serial.println("<D,s,e>   Dump Chips memory from s address to e address in decimal only.");
+  Serial.println("<I,0,0>   Read Chips Device ID and report it's type, only SST39SF010 / 020 / 040 are supported.");
+}
+
+void ListCommands()
+{
+  Serial.println("<W,a,b>   Write to address a with byte value b.");
+  Serial.println("<R,a,0>   Read a 256 byte block from chip starting at address a. Dump maybe more useful");
+  Serial.println("<E,0,0>   Erase entire chip, both parameters are ignored but must be supplied.");
+  Serial.println("<D,s,e>   Dump Chips memory from s address to e address in decimal only.");
+  Serial.println("<I,0,0>   Read Chips Device ID and report it's type, only SST39SF010 / 020 / 040 are supported.");
 }
 
 void loop()
@@ -223,6 +344,35 @@ void writeByte(byte data, unsigned long address)
   digitalWrite(WE, LOW);
   delayMicroseconds(1);
   digitalWrite(WE, HIGH); 
+}
+
+void EnterIDMode()
+{
+  setDigitalOut();
+
+  writeByte(0xAA, 0x5555);
+  writeByte(0x55, 0x2AAA);
+  writeByte(0x90, 0x5555);
+}
+
+void ExitIDMode()
+{
+  setDigitalOut();
+
+  writeByte(0xAA, 0x5555);
+  writeByte(0x55, 0x2AAA);
+  writeByte(0xF0, 0x5555);
+}
+
+byte ReadID()
+{
+  byte manufacturer;
+  byte deviceID;
+
+  manufacturer = readData(0x00);
+  deviceID = readData(0x01);
+
+  return deviceID;
 }
 
 void programData(byte data, unsigned long address)
