@@ -13,7 +13,7 @@ This was taken from an example which only wrote to one address. I've added more 
 | Vss                   |       GND.                    |
 | Vdd                   |       +5v.                    |
 
-The commands are formatted as follows:
+The commands are listed on startup in a terminal window and are formatted as follows:
 
 Write a byte: <W,addr,byte>
 This writes a single "decimal" byte (not HEX!) to a decimal address. All writes are checked by reading back the data and messages sent back to the terminal
@@ -23,6 +23,8 @@ Set addr to the first 256 byte boundary that you want to read 256 bytes from. Th
 
 Erase entire chip: <E,0,0>
 Both parameters are ignored and the whole chip is erased. There is no function to erase a sector which is the minimum you can erase in one go, plus I don't need to erase anything but the whole chip.
+
+Please Note: The baud rate is set to 2Mbaud which is way higher than it needs to be so you may want to adjust to suit your needs / hardware limitations etc.
 
 This is a current work in progress and will change a fair bit over the next few weeks. At some point I'll write a C# application to flash a whole chip, or you can have a go yourself and let me know and I'll add it to this repo.
 
