@@ -24,9 +24,16 @@ Set addr to the first 256 byte boundary that you want to read 256 bytes from. Th
 Erase entire chip: <E,0,0>
 Both parameters are ignored and the whole chip is erased. There is no function to erase a sector which is the minimum you can erase in one go, plus I don't need to erase anything but the whole chip.
 
-Please Note: The baud rate is set to 2Mbaud which is way higher than it needs to be so you may want to adjust to suit your needs / hardware limitations etc.
+Get Chip ID: <I,0,0>
 
-This is a current work in progress and will change a fair bit over the next few weeks. At some point I'll write a C# application to flash a whole chip, or you can have a go yourself and let me know and I'll add it to this repo.
+Dump chip contents: <D,a,b>
+Where a is the start address in decimal and b is the end address in decimal
+
+The streaming write commands will be added to this readme later and consist of 3 commands which I need to fully test before saying they're golden.
+
+Please Note: The baud rate is set to 115200 but can be changed in both the Windows application and the Arduino Mega code.
+
+This is a current work in progress and will change a fair bit over the next few weeks. C# application to flash a whole chip has now been added and that is also a WIP.
 
 Enjoy!
 Dan R
