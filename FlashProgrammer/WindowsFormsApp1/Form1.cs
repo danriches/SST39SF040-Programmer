@@ -32,7 +32,7 @@ namespace WindowsFormsApp1
         private void Form1_Load(object sender, EventArgs e)
         {
             //Find last com port and list it in the control.
-
+            _continue = false;
         }
 
         private void AddToMessageLog(string textToAdd)
@@ -87,6 +87,8 @@ namespace WindowsFormsApp1
             //try
             //{ 
             string data = serial.ReadLine();        //This line is problematic and maybe should be serial.ReadBytes???
+            if (data.StartsWith("OK"))
+                _continue = true;
             if (data.StartsWith("0x"))
                 this.BeginInvoke(new SetTextDeleg(SerialIn_DataReceived), new object[] { data });
             else
@@ -171,7 +173,7 @@ namespace WindowsFormsApp1
         string WriteFileToFlash(string filename)
         {
             string result = "FAILED!";
-
+            
             //Open the file and read into a byte array
             byte[] dataArray = File.ReadAllBytes(filename);
 
@@ -182,32 +184,37 @@ namespace WindowsFormsApp1
             txtMessages.Text += "Writing Flash starting at address 0x0000. Please Wait...";
             int addressCounter = 0;
 
-            //send <X,0,0> then <Z,x,0>   where x is 256 or the number of bytes to write, lastly send <Y> and then the full amount of bytes in sequence  
+            //send <X,0,0> then <Z,x,y>   where x is 256 or the number of bytes to write, lastly send <Y> and then the full amount of bytes in sequence  
             //- Arduino side seems to work just need this side to
             int totalSize = dataArray.Length;
 
             serial.WriteLine("<X," + txtStartAddress.Text + ",0>");
-            serial.WriteLine("<Z," + totalSize.ToString() + ",0>");
+            serial.WriteLine("<Z," + "50," + totalSize.ToString() + ">");
             serial.Write("<Y>");
 
             int offset = 0;
-            int block = 256;
+            int block = 50;
             if (block > totalSize)
                 block = totalSize;
             
             //This part needs checking before allowing a write to Flash!!!!!!!
             while(offset < totalSize)
-            {                
+            {
+                _continue = false;
+                if ((offset + block) > totalSize)
+                    block = totalSize - offset;
                 serial.Write(dataArray, offset, block);
                 if (offset + block > totalSize)
                     offset = totalSize - (offset + block);
                 else
                     offset += block;
-                Application.DoEvents();
+                
+                while(_continue == false)
+                    Application.DoEvents();
             }
             //Read the bytes back and compare, using a dump command, ignore and don't read data past where it was written...
 
-            return "Success: Wrote " + (addressCounter + 1).ToString() + " bytes to Flash." + Environment.NewLine;
+            return "Success: Wrote " + totalSize.ToString() + " bytes to Flash." + Environment.NewLine;
         }
 
         private void btnErase_Click(object sender, EventArgs e)

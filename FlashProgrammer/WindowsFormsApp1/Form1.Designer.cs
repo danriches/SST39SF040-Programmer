@@ -166,7 +166,7 @@
             this.txtMessages.Multiline = true;
             this.txtMessages.Name = "txtMessages";
             this.txtMessages.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
-            this.txtMessages.Size = new System.Drawing.Size(681, 85);
+            this.txtMessages.Size = new System.Drawing.Size(681, 306);
             this.txtMessages.TabIndex = 11;
             // 
             // label3
@@ -247,7 +247,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(715, 546);
+            this.ClientSize = new System.Drawing.Size(715, 770);
             this.Controls.Add(this.button1);
             this.Controls.Add(this.btnClearLog);
             this.Controls.Add(this.btnClearData);
