@@ -1,0 +1,10 @@
+C:\Users\Daniel.000\Documents\Visual Studio 2017\Projects\FlashProgrammer\WindowsFormsApp1\bin\Debug\WindowsFormsApp1.exe.config
+C:\Users\Daniel.000\Documents\Visual Studio 2017\Projects\FlashProgrammer\WindowsFormsApp1\bin\Debug\WindowsFormsApp1.exe
+C:\Users\Daniel.000\Documents\Visual Studio 2017\Projects\FlashProgrammer\WindowsFormsApp1\bin\Debug\WindowsFormsApp1.pdb
+C:\Users\Daniel.000\Documents\Visual Studio 2017\Projects\FlashProgrammer\WindowsFormsApp1\obj\Debug\WindowsFormsApp1.csprojAssemblyReference.cache
+C:\Users\Daniel.000\Documents\Visual Studio 2017\Projects\FlashProgrammer\WindowsFormsApp1\obj\Debug\WindowsFormsApp1.Form1.resources
+C:\Users\Daniel.000\Documents\Visual Studio 2017\Projects\FlashProgrammer\WindowsFormsApp1\obj\Debug\WindowsFormsApp1.Properties.Resources.resources
+C:\Users\Daniel.000\Documents\Visual Studio 2017\Projects\FlashProgrammer\WindowsFormsApp1\obj\Debug\WindowsFormsApp1.csproj.GenerateResource.cache
+C:\Users\Daniel.000\Documents\Visual Studio 2017\Projects\FlashProgrammer\WindowsFormsApp1\obj\Debug\WindowsFormsApp1.csproj.CoreCompileInputs.cache
+C:\Users\Daniel.000\Documents\Visual Studio 2017\Projects\FlashProgrammer\WindowsFormsApp1\obj\Debug\WindowsFormsApp1.exe
+C:\Users\Daniel.000\Documents\Visual Studio 2017\Projects\FlashProgrammer\WindowsFormsApp1\obj\Debug\WindowsFormsApp1.pdb
