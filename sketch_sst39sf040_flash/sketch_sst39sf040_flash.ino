@@ -41,6 +41,7 @@ boolean commandValid = 0;
 long writeAddressCounter = 0;
 long bytesWrittenCounter = 0;
 boolean StreamMode = 0;           //Set to 1 when the serial data isn't formatted and just a stream of 2048 bytes
+long totalSize = 0;
 long bytesToWrite = 0;
 
 void recvWithStartEndMarkers() 
@@ -50,25 +51,39 @@ void recvWithStartEndMarkers()
     char startMarker = '<';
     char endMarker = '>';
     char rc;
-    byte bc[256];      //Our byte buffer which needs to be bigger, say 256 bytes
+    byte bc[50];      //Our byte buffer which needs to be bigger, say 256 bytes
     //We need to check StreamMode == 1 and then ignore the start and end markers
  // if (Serial.available() > 0) {
     while (Serial.available() > 0 && newData == false) {
         if(StreamMode == 0)
           rc = Serial.read();
         else
-          Serial.readBytes(bc, bytesToWrite);
+          Serial.readBytes(bc, bytesToWrite);    //read block size amount of bytes to write
 
         if(StreamMode == 1)
         {
             //Write each byte in the bc array using  bytesToWrite as the max count
             for(int c = 0; c < bytesToWrite; c++)
             {
+              if(writeAddressCounter >= totalSize)
+              {
+                StreamMode = 0;
+                break;
+              }
               programData(bc[c], writeAddressCounter);
               writeAddressCounter++;
             }
-            Serial.println("Flash Written Successfully.");
-            StreamMode = 0;
+            //This part is wrong, we need to continue to grab serial data and write it until we hit writeAddressCounter == bytesToWrite
+            if(writeAddressCounter >= totalSize)
+            {
+              Serial.println("Flash Written Successfully.");
+              StreamMode = 0;
+            } //Else we carry on with getting data and writing it
+            else
+            {
+              Serial.print("OK");   //Signal sender to send next block
+              Serial.println(writeAddressCounter);
+            }
             
         } else
         {
@@ -158,7 +173,7 @@ void showNewData()
 
       //parse the second paramter which is the byte value, or the end address in the case of a read (R) or dump (D)
       strtokIndx = strtok(NULL, ",");
-      if(messageFromPC[0] == 'R' || messageFromPC[0] == 'D' || messageFromPC[0] == 'Y')
+      if(messageFromPC[0] == 'R' || messageFromPC[0] == 'D' || messageFromPC[0] == 'Y' || messageFromPC[0] == 'Z' || messageFromPC[0] == 'X')
         endAddressFromPC = atol(strtokIndx);
       else
         byteFromPC = atoi(strtokIndx);
@@ -310,11 +325,15 @@ void showNewData()
         commandValid = 1;
       }
 
-      //Set the bytes to write counter
+      //Set the bytes to write counter (a block of bytes not the whole lot!)
       if(messageFromPC[0] == 'Z')
       {
         bytesToWrite = addressFromPC;
-        writeAddressCounter = 0;
+        totalSize = endAddressFromPC;
+        Serial.print(bytesToWrite);
+        Serial.print(" block size with a total of: ");
+        Serial.print(totalSize);
+        Serial.println(" bytes");
         commandValid = 1;
       }
 
