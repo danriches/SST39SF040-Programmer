@@ -1,5 +1,5 @@
-//Written poorly by mikemint64 - Then modified heavily by Dan Riches
-//visit at mint64.home.blog
+//Written by Dan Riches - 2022
+
 
 #define WE 2
 #define OE 3
@@ -10,7 +10,7 @@
 #define RD0 44
 #define RD7 51
 
-#define debugOutput 0
+#define debugOutput 1
 
 void setCtrlPins();                                   //Setup control signals
 void setAddrPinsOut();                                //Setup address signals
@@ -38,6 +38,11 @@ long endAddressFromPC = 0;
 int byteFromPC = 0;
 boolean commandValid = 0;
 
+long writeAddressCounter = 0;
+long bytesWrittenCounter = 0;
+boolean StreamMode = 0;           //Set to 1 when the serial data isn't formatted and just a stream of 2048 bytes
+long bytesToWrite = 0;
+
 void recvWithStartEndMarkers() 
 {
     static boolean recvInProgress = false;
@@ -45,29 +50,51 @@ void recvWithStartEndMarkers()
     char startMarker = '<';
     char endMarker = '>';
     char rc;
- 
+    byte bc[256];      //Our byte buffer which needs to be bigger, say 256 bytes
+    //We need to check StreamMode == 1 and then ignore the start and end markers
  // if (Serial.available() > 0) {
     while (Serial.available() > 0 && newData == false) {
-        rc = Serial.read();
+        if(StreamMode == 0)
+          rc = Serial.read();
+        else
+          Serial.readBytes(bc, bytesToWrite);
 
-        if (recvInProgress == true) {
-            if (rc != endMarker) {
-                receivedChars[ndx] = rc;
-                ndx++;
-                if (ndx >= numChars) {
-                    ndx = numChars - 1;
-                }
+        if(StreamMode == 1)
+        {
+            //Write each byte in the bc array using  bytesToWrite as the max count
+            for(int c = 0; c < bytesToWrite; c++)
+            {
+              programData(bc[c], writeAddressCounter);
+              writeAddressCounter++;
             }
-            else {
-                receivedChars[ndx] = '\0'; // terminate the string
-                recvInProgress = false;
-                ndx = 0;
-                newData = true;
-            }
-        }
-
-        else if (rc == startMarker) {
-            recvInProgress = true;
+            Serial.println("Flash Written Successfully.");
+            StreamMode = 0;
+            
+        } else
+        {
+          if (recvInProgress == true) 
+          {
+              if (rc != endMarker) 
+              {
+                  receivedChars[ndx] = rc;
+                  ndx++;
+                  if (ndx >= numChars) 
+                  {
+                      ndx = numChars - 1;
+                  }
+              }
+              else 
+              {
+                  receivedChars[ndx] = '\0'; // terminate the string
+                  recvInProgress = false;
+                  ndx = 0;
+                  newData = true;
+              }
+          }
+          else if (rc == startMarker) 
+          {
+              recvInProgress = true;
+          }
         }
     }
 }
@@ -131,7 +158,7 @@ void showNewData()
 
       //parse the second paramter which is the byte value, or the end address in the case of a read (R) or dump (D)
       strtokIndx = strtok(NULL, ",");
-      if(messageFromPC[0] == 'R' || messageFromPC[0] == 'D')
+      if(messageFromPC[0] == 'R' || messageFromPC[0] == 'D' || messageFromPC[0] == 'Y')
         endAddressFromPC = atol(strtokIndx);
       else
         byteFromPC = atoi(strtokIndx);
@@ -190,10 +217,16 @@ void showNewData()
       //Read Chip ID
       if(messageFromPC[0] == 'I')
       {
-        Serial.println("Reading Chip ID...");
+        Serial.print("Reading Chip ID... ");
         EnterIDMode();
         byte id = ReadID();
+        Serial.println(id, HEX);
         ExitIDMode();
+
+        if(id != 0xB5 && id != 0xB6 && id != 0xB7)
+        {
+          Serial.println("Device is not made by SST, proceed with caution!");
+        }
 
         if(id == 0xB5)
         {
@@ -253,6 +286,36 @@ void showNewData()
           printdump(i, j);
         }
         commandValid = 1;
+        Serial.println("");
+        Serial.println("Flash Dump Successful!");
+      }
+
+      //Set the write address counter
+      if(messageFromPC[0] == 'X')
+      {
+        //Reset Counters
+        writeAddressCounter = addressFromPC;
+        bytesWrittenCounter = 0;
+        Serial.print("SET Write Counters, start from ");
+        Serial.print(addressFromPC, HEX);
+        Serial.println(" - Done.");
+        commandValid = 1;
+      }
+
+      //Start the flash stream off (16 byte chunks)
+      if(messageFromPC[0] == 'Y')
+      {
+        Serial.println("Start of stream:");
+        StreamMode = 1;
+        commandValid = 1;
+      }
+
+      //Set the bytes to write counter
+      if(messageFromPC[0] == 'Z')
+      {
+        bytesToWrite = addressFromPC;
+        writeAddressCounter = 0;
+        commandValid = 1;
       }
 
       //Leave this part at the end, ie add new commands above this line
@@ -271,7 +334,7 @@ void setup()
   setCtrlPins();
   setAddrPinsOut();
 
-  Serial.begin(2000000);
+  Serial.begin(115200);
   delay(2);
   Serial.println("Arduino Flash Programmer Started");
   Serial.println("Commands available are as follows:");
@@ -370,6 +433,10 @@ byte ReadID()
   byte deviceID;
 
   manufacturer = readData(0x00);
+  //if(manufacturer != 0xBF)
+  //  return 0;
+  Serial.print("Manufacturer ID: ");
+  Serial.println(manufacturer);
   deviceID = readData(0x01);
 
   return deviceID;
